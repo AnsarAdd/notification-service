@@ -21,6 +21,9 @@ public class PushInboxScheduler {
     @Value("${inbox.batch-size}")
     private int batchSize;
 
+    @Value("${inbox.delay-ms}")
+    private long delayMs;
+
     @Scheduled(fixedDelayString = "${inbox.delay-ms}")
     public void processInbox() {
         List<PushInbox> messages =

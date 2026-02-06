@@ -26,7 +26,10 @@ public class EmailInboxScheduler {
 
     @Scheduled(fixedDelayString = "${inbox.delay-ms}")
     public void processInbox() {
-        List<EmailInbox> messages = repository.findByProcessedFalseOrderByCreatedAtAsc(PageRequest.of(0, batchSize)).getContent();
+        List<EmailInbox> messages =
+                repository.findByProcessedFalseOrderByCreatedAtAsc(
+                PageRequest.of(0, batchSize)
+        ).getContent();
 
         for (EmailInbox msg : messages) {
             try {
