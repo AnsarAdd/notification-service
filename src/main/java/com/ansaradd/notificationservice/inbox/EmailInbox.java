@@ -2,6 +2,7 @@ package com.ansaradd.notificationservice.inbox;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ public class EmailInbox {
     @Column(nullable = false, updatable = false, columnDefinition = "uuid")
     private UUID id;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP DEFAULT now()")
     private LocalDateTime createdAt = LocalDateTime.now();
 
