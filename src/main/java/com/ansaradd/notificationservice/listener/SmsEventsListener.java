@@ -1,47 +1,33 @@
 package com.ansaradd.notificationservice.listener;
 
+import com.ansaradd.notificationservice.config.NotificationTopicsConfig;
 import com.ansaradd.notificationservice.inbox.SmsInbox;
 import com.ansaradd.notificationservice.repository.SmsInboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class SmsEventsListener {
+public class SmsEventsListener extends AbstractEventsListener<SmsInbox, SmsInboxRepository> {
 
     private final SmsInboxRepository repository;
+    private final NotificationTopicsConfig topicsConfig;
 
-    @KafkaListener(
-            topics = "sms-events",
-            groupId = "notification-service"
-    )
-    public void listen(ConsumerRecord<String, String> record) {
-        String messageKey = record.key();
-        String messageValue = record.value();
-        log.info("=== RECEIVED SMS MESSAGE ===");
-        log.info("Topic: {}, Key: {}, Value: {}",
-                record.topic(), messageKey, messageValue);
+    @Override protected SmsInboxRepository getRepository() { return repository; }
 
-        if (repository.existsByKeyAndValue(messageKey, messageValue)) {
-            log.debug("Дубликат сообщения пропущен: Key: {}, Value: {}",
-                    messageKey, messageValue);
-            return;
-        }
-
-        SmsInbox inbox = SmsInbox.builder()
+    @Override
+    protected SmsInbox createInboxMessage(ConsumerRecord<String, String> record) {
+        return SmsInbox.builder()
                 .topic(record.topic())
-                .key(messageKey)
-                .value(messageValue)
+                .key(record.key())
+                .value(record.value())
                 .processed(false)
                 .attempt(1)
                 .build();
-
-        repository.save(inbox);
-        log.info("Новое сообщение сохранено в SmsInbox: Key: {}, Value: {}",
-                messageKey, messageValue);
     }
+
+    @Override public String getTopic() { return topicsConfig.getSms(); }
 }

@@ -2,51 +2,24 @@ package com.ansaradd.notificationservice.scheduler;
 
 import com.ansaradd.notificationservice.inbox.PushInbox;
 import com.ansaradd.notificationservice.repository.PushInboxRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
-@RequiredArgsConstructor
-@Slf4j
-public class PushInboxScheduler {
+public class PushInboxScheduler extends AbstractInboxScheduler<PushInbox, PushInboxRepository> {
 
     private final PushInboxRepository repository;
 
-    @Value("${inbox.batch-size}")
-    private int batchSize;
+    public PushInboxScheduler(PushInboxRepository repository) {
+        this.repository = repository;
+    }
 
-    @Value("${inbox.delay-ms}")
-    private long delayMs;
+    @Override
+    protected PushInboxRepository getRepository() {
+        return repository;
+    }
 
-    @Scheduled(fixedDelayString = "${inbox.delay-ms}")
-    public void processInbox() {
-        List<PushInbox> messages =
-                repository.findByProcessedFalseOrderByCreatedAtAsc(
-                        PageRequest.of(0, batchSize)
-                ).getContent();
-
-        for (PushInbox msg : messages) {
-            try {
-                log.info(
-                        "Обработано событие: Key: {}, Payload: {}, topic: {}",
-                        msg.getKey(), msg.getValue(), msg.getTopic()
-                );
-                msg.setProcessed(true);
-            } catch (Exception e) {
-                msg.setAttempt(msg.getAttempt() + 1);
-                log.error(
-                        "Ошибка обработки сообщения Key: {}. Attempt: {}. Ошибка: {}",
-                        msg.getKey(), msg.getAttempt(), e.getMessage()
-                );
-            } finally {
-                repository.save(msg);
-            }
-        }
+    @Override
+    protected String getInboxType() {
+        return "push";
     }
 }

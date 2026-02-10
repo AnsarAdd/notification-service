@@ -2,48 +2,18 @@ package com.ansaradd.notificationservice.scheduler;
 
 import com.ansaradd.notificationservice.inbox.SmsInbox;
 import com.ansaradd.notificationservice.repository.SmsInboxRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
-@RequiredArgsConstructor
-@Slf4j
-public class SmsInboxScheduler {
+public class SmsInboxScheduler extends AbstractInboxScheduler<SmsInbox, SmsInboxRepository> {
 
     private final SmsInboxRepository repository;
 
-    @Value("${inbox.batch-size}")
-    private int batchSize;
-
-    @Scheduled(fixedDelayString = "${inbox.delay-ms}")
-    public void processInbox() {
-        List<SmsInbox> messages =
-                repository.findByProcessedFalseOrderByCreatedAtAsc(
-                        PageRequest.of(0, batchSize)
-                ).getContent();
-
-        for (SmsInbox msg : messages) {
-            try {
-                log.info(
-                        "Обработано событие: Key: {}, Payload: {}, topic: {}",
-                        msg.getKey(), msg.getValue(), msg.getTopic()
-                );
-                msg.setProcessed(true);
-            } catch (Exception e) {
-                msg.setAttempt(msg.getAttempt() + 1);
-                log.error(
-                        "Ошибка обработки сообщения Key: {}. Attempt: {}. Ошибка: {}",
-                        msg.getKey(), msg.getAttempt(), e.getMessage()
-                );
-            } finally {
-                repository.save(msg);
-            }
-        }
+    public SmsInboxScheduler(SmsInboxRepository repository) {
+        this.repository = repository;
     }
+
+    @Override protected SmsInboxRepository getRepository() { return repository; }
+
+    @Override protected String getInboxType() { return "sms"; }
 }

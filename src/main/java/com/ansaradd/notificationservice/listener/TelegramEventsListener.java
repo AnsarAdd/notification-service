@@ -1,47 +1,33 @@
 package com.ansaradd.notificationservice.listener;
 
+import com.ansaradd.notificationservice.config.NotificationTopicsConfig;
 import com.ansaradd.notificationservice.inbox.TelegramInbox;
 import com.ansaradd.notificationservice.repository.TelegramInboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class TelegramEventsListener {
+public class TelegramEventsListener extends AbstractEventsListener<TelegramInbox, TelegramInboxRepository> {
 
     private final TelegramInboxRepository repository;
+    private final NotificationTopicsConfig topicsConfig;
 
-    @KafkaListener(
-            topics = "telegram-events",
-            groupId = "notification-service"
-    )
-    public void listen(ConsumerRecord<String, String> record) {
-        String messageKey = record.key();
-        String messageValue = record.value();
-        log.info("=== RECEIVED TELEGRAM MESSAGE ===");
-        log.info("Topic: {}, Key: {}, Value: {}",
-                record.topic(), messageKey, messageValue);
+    @Override protected TelegramInboxRepository getRepository() { return repository; }
 
-        if (repository.existsByKeyAndValue(messageKey, messageValue)) {
-            log.debug("Дубликат сообщения пропущен: Key: {}, Value: {}",
-                    messageKey, messageValue);
-            return;
-        }
-
-        TelegramInbox inbox = TelegramInbox.builder()
+    @Override
+    protected TelegramInbox createInboxMessage(ConsumerRecord<String, String> record) {
+        return TelegramInbox.builder()
                 .topic(record.topic())
-                .key(messageKey)
-                .value(messageValue)
+                .key(record.key())
+                .value(record.value())
                 .processed(false)
                 .attempt(1)
                 .build();
-
-        repository.save(inbox);
-        log.info("Новое сообщение сохранено в TelegramInbox: Key: {}, Value: {}",
-                messageKey, messageValue);
     }
+
+    @Override public String getTopic() { return topicsConfig.getTelegram(); }
 }

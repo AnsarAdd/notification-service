@@ -2,46 +2,33 @@ package com.ansaradd.notificationservice.listener;
 
 import com.ansaradd.notificationservice.inbox.EmailInbox;
 import com.ansaradd.notificationservice.repository.EmailInboxRepository;
+import com.ansaradd.notificationservice.config.NotificationTopicsConfig;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
-public class EmailEventsListener {
+public class EmailEventsListener extends AbstractEventsListener<EmailInbox, EmailInboxRepository>{
 
     private final EmailInboxRepository repository;
+    private final NotificationTopicsConfig topicsConfig;
 
-    @KafkaListener(
-            topics = "email-events",
-            groupId = "notification-service"
-    )
-    public void listen(ConsumerRecord<String, String> record) {
-        String messageKey = record.key();
-        String messageValue = record.value();
-        log.info("=== RECEIVED EMAIL MESSAGE ===");
-        log.info("Topic: {}, Key: {}, Value: {}",
-                record.topic(), messageKey, messageValue);
+    @Override protected EmailInboxRepository getRepository() { return repository; }
 
-        if (repository.existsByKeyAndValue(messageKey, messageValue)) {
-            log.debug("Дубликат сообщения пропущен: Key: {}, Value: {}",
-                    messageKey, messageValue);
-            return;
-        }
-
-        EmailInbox inbox = EmailInbox.builder()
+    @Override
+    protected EmailInbox createInboxMessage(ConsumerRecord<String, String> record) {
+        return EmailInbox.builder()
                 .topic(record.topic())
-                .key(messageKey)
-                .value(messageValue)
+                .key(record.key())
+                .value(record.value())
                 .processed(false)
                 .attempt(1)
                 .build();
+    }
 
-        repository.save(inbox);
-        log.info("Новое сообщение сохранено в EmailInbox: Key: {}, Value: {}",
-                messageKey, messageValue);
+    @Override
+    public String getTopic() {
+        return topicsConfig.getEmail();
     }
 }
