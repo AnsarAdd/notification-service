@@ -16,7 +16,7 @@ public abstract class AbstractEventsListener<
     protected abstract T createInboxMessage(ConsumerRecord<String, String> record);
     public abstract String getTopic();
 
-    @KafkaListener(topics = "#{__listener.topic}", groupId = "notification-service1")
+    @KafkaListener(topics = "#{__listener.topic}", groupId = "notification-service")
     public void listen(ConsumerRecord<String, String> record) {
         String messageKey = record.key();
         String messageValue = record.value();
